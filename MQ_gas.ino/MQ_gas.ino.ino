@@ -1,81 +1,74 @@
-/*
-  LiquidCrystal Library - Hello World
-
- Demonstrates the use a 16x2 LCD display.  The LiquidCrystal
- library works with all LCD displays that are compatible with the
- Hitachi HD44780 driver. There are many of them out there, and you
- can usually tell them by the 16-pin interface.
-
- This sketch prints "Hello World!" to the LCD
- and shows the time.
-
-  The circuit:
- * LCD RS pin to digital pin 12
- * LCD Enable pin to digital pin 11
- * LCD D4 pin to digital pin 5
- * LCD D5 pin to digital pin 4
- * LCD D6 pin to digital pin 3
- * LCD D7 pin to digital pin 2
- * LCD R/W pin to ground
- * LCD VSS pin to ground
- * LCD VCC pin to 5V
- * 10K resistor:
- * ends to +5V and ground
- * wiper to LCD VO pin (pin 3)
-
- Library originally added 18 Apr 2008
- by David A. Mellis
- library modified 5 Jul 2009
- by Limor Fried (http://www.ladyada.net)
- example added 9 Jul 2009
- by Tom Igoe
- modified 22 Nov 2010
- by Tom Igoe
-
- This example code is in the public domain.
-
- http://www.arduino.cc/en/Tutorial/LiquidCrystal
- */
-
 // include the library code:
 #include <LiquidCrystal.h>
+#include <SD.h>
 
-// initialize the library with the numbers of the interface pins
-LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
-const int gasSensor = A0;
+LiquidCrystal lcd(7, 6, 5, 4, 3, 2);        // initialize the library with the numbers of the interface pins
+
+const int gasSensor = A0;                     // Gas sensor is connected to Analog pin 0
+const int CS_PIN = 8;                         // Sparkfun micro SD card shield uses pin 8
 
 void setup() {
-  // set up the LCD's number of columns and rows:
-  lcd.begin(16, 2);
+
+  lcd.begin(16, 2);                           // set up the LCD's number of columns and rows:
+  
   Serial.begin(9600);
-  // Print a message to the LCD.
-  lcd.print("Resistance:");
+  
+  lcd.print("Voltage:");                      // Print a message to the LCD.
+  
+  Serial.println("Initializing Card...");
+  pinMode(CS_PIN, OUTPUT);
+
+  if(!SD.begin(CS_PIN)){
+    Serial.println("Card Failure");
+    return;
+  }
+  Serial.println("Card Ready");
 }
 
 void loop() {
+  String dataString = "";
+
+  // give analogVal the values getting read from the analog output
+  int analogVal = analogRead(gasSensor);
+
+  // convert analog values to a voltage value between 0V-5V
+  int voltage = (int)((analogVal*5000L)/1024);
+
+  File dataFile = SD.open("log.txt", FILE_WRITE);
+
+  if(dataFile){
+
+    int timestamp = millis();
+
+    dataFile.print(timestamp);
+    dataFile.print(" ms");
+    dataFile.print(", ");
+    dataFile.print(voltage);
+    dataFile.print(" mV");
+    dataFile.println();
+    Serial.print(timestamp);
+    Serial.print(" ms");
+    Serial.print(", ");
+    Serial.print(voltage);
+    Serial.print(" millivolts");
+    Serial.println();
+
+    //dataFile.println();
+    dataFile.close();
+  }
+  else{
+    Serial.println("error opening log.txt");
+  }
+  
   // set the cursor to column 0, line 1
-  // (note: line 1 is the second row, since counting begins with 0):
+  //(note: line 1 is the second row, since counting begins with 0):
   lcd.setCursor(0, 1);
-  // print the number of seconds since reset:
-  //lcd.print(millis() / 1000);
-  lcd.print(analogRead(gasSensor));
-  lcd.print(" kOhm(s)");
-  /*lcd.clear();
-  lcd.print(analogRead(gasSensor));
-  lcd.print(" kOhm(s)");*/
-  Serial.println(analogRead(gasSensor));
+
+  // print out the voltage (as millivolts)
+  lcd.print(voltage);
+  lcd.print(" mV");
   delay(500);
-}
-/*const int gasSensor = A0;
 
-void setup(){
-  Serial.begin(9600);
 }
 
-void loop(){
-  Serial.print(analogRead(gasSensor));
-  Serial.print(" kOhm(s)");
-  Serial.println("");
-  delay(100);
-}*/
 
